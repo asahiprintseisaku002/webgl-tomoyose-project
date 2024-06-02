@@ -1,0 +1,49 @@
+アニメーションを制御するために、スペースキーの押下状態をトラッキングする既存のコードに、ボタンを使ったアニメーションの開始と停止の機能を追加することができます。以下のステップで実装できます:
+
+1. アニメーションの状態を管理するための新しいフラグを定義します。
+2. ボタンのクリックイベントを追加し、そのイベントでアニメーションのフラグを切り替えます。
+3. `render`関数内で、アニメーションのフラグに基づいてアニメーションを実行または停止します。
+
+以下のコード例は、これらのステップを実装したものです:
+
+```javascript
+// アニメーションの状態を管理するフラグ
+this.isAnimating = false;
+
+// ボタンのクリックイベントハンドラーを追加
+this.toggleButton = document.getElementById('toggleButton'); // 仮にボタンのIDが'toggleButton'だとします
+this.toggleButton.addEventListener('click', () => {
+  this.isAnimating = !this.isAnimating; // フラグの状態を切り替える
+});
+
+// render関数内でアニメーションのフラグをチェック
+render() {
+  requestAnimationFrame(this.render.bind(this)); // thisのコンテキストを保持するためにbindを使用
+
+  // コントロールを更新
+  this.controls.update();
+
+  // groupBigの回転の最小値と最大値を定義
+  const minRotationZ = -Math.PI / 3;
+  const maxRotationZ = Math.PI / 3;
+
+  // フラグに応じてアニメーションを実行
+  if (this.isAnimating) {
+    // アニメーションを実行するコード
+    this.scene.rotation.y += (Math.sin(Date.now() * 0.001) * (maxRotationZ - minRotationZ) / 2);
+  }
+
+  // レンダラーで描画
+  this.renderer.render(this.scene, this.camera);
+}
+```
+
+このコードでは、`toggleButton`というIDを持つボタンがクリックされると、`isAnimating`フラグが切り替わり、アニメーションが開始または停止します。`render`関数内では、`isAnimating`フラグが`true`の場合にのみアニメーションが実行されます。
+
+HTML側では、次のようにボタンを追加します:
+
+```html
+<button id="toggleButton">アニメーションの開始/停止</button>
+```
+
+この実装により、ボタンをクリックすることでアニメーションの開始と停止を制御できるようになります。`requestAnimationFrame`を呼び出す際に`this.render.bind(this)`を使用している点に注意してください。これは、`render`関数が正しいコンテキスト（`this`）で実行されるようにするためです。また、`isAnimating`フラグは、スペースキーの押下状態を管理する`isDown`フラグとは独立しています。このため、キーボードとボタンの両方でアニメーションを制御できます。

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <script src="project-01-13.js" type="module"></script>
+    <style>
+      * {margin: 0; padding: 0;}
+      html, body {
+        overflow: hidden;
+      }
+      
+      .text {
+        position: fixed;
+        top: 75%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: #ffffff;
+        z-index: 100;
+        transition: opacity 0.8s;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="webgl">
+      <h2 class="text">Press Spacebar！</h2>
+    </div>
+    <script>
+      if (/Mobi|Android/i.test(navigator.userAgent)) {
+        document.querySelector('.text').textContent = 'Tap!';
+      }
+    </script>
+  </body>
+</html>
+
