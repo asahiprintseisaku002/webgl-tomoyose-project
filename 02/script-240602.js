@@ -334,11 +334,7 @@ class ThreeApp {
     const axesBarLength = 10.0;
     this.axesHelper = new THREE.AxesHelper(axesBarLength);
     this.scene.add(this.axesHelper);
-    /*
-    const size = 100; const divisions = 50; 
-    const gridHelper = new THREE.GridHelper( size, divisions ); 
-    this.scene.add( gridHelper );
-    */
+ 
     // コントロール
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
