@@ -364,23 +364,23 @@ class ThreeApp {
             document.querySelector('.text').style.opacity = '1';
         }
     });
-/*
+
     // タップ操作を検出できるようにする
     window.addEventListener('touchstart', (touchEvent) => {
-        if (!this.isAnimating) { 
-            self.isDown = true;
-            self.isAnimating = !self.isAnimating;
-            document.querySelector('.text').style.opacity = '0';
-        }
-    }, false);
+      if (!self.isAnimating) { 
+          self.isDown = true;
+          self.isAnimating = !self.isAnimating;
+          document.querySelector('.text').style.opacity = '0';
+      }
+  }, false);
+  
+  window.addEventListener('touchend', (touchEvent) => {
+      if (!self.isAnimating) {
+          self.isDown = false;
+          document.querySelector('.text').style.opacity = '1';
+      }
+  }, false);
 
-    window.addEventListener('touchend', (touchEvent) => {
-        if (event.code === 'Space' && !self.isAnimating) {
-            self.isDown = false;
-            document.querySelector('.text').style.opacity = '1';
-        }
-    }, false);
-*/
     // ウィンドウのリサイズを検出できるようにする
     window.addEventListener('resize', () => {
       this.renderer.setSize(window.innerWidth, window.innerHeight);
