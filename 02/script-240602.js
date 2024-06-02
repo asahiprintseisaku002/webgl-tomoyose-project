@@ -377,7 +377,6 @@ class ThreeApp {
   window.addEventListener('touchend', (touchEvent) => {
       if (!self.isAnimating ) {
           self.isDown = false;
-          self.isAnimating = !self.isAnimating; 
           document.querySelector('.text').style.opacity = '1';
       }
   }, false);
