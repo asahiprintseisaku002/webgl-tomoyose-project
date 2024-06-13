@@ -17,10 +17,10 @@
 import * as THREE from '../lib/three.module.js';
 import { OrbitControls } from '../lib/OrbitControls.js';
 
-window.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded', /*async*/ () => {
   const wrapper = document.querySelector('#webgl');
   const app = new ThreeApp(wrapper);
-  await app.load();
+  //await app.load();
   app.init();
   app.render();
 }, false);
@@ -29,11 +29,11 @@ class ThreeApp {
   /**
    * 月に掛けるスケール
    */
-  static MOON_SCALE = 0.27;
+  static MOON_SCALE = 0.5;
   /**
    * 月と地球の間の距離
    */
-  static MOON_DISTANCE = 3.0;
+  static MOON_DISTANCE = 1.2;
   /**
    * 人工衛星の移動速度
    */
@@ -80,7 +80,11 @@ class ThreeApp {
    * マテリアル定義のための定数
    */
   static MATERIAL_PARAM = {
-    color: 0xffffff,
+    color: 0x19a8e7,
+  };
+
+  static MATERIAL_PARAM2 = {
+    color: 0xc9c9c9,
   };
   /**
    * フォグの定義のための定数
@@ -153,13 +157,14 @@ class ThreeApp {
       );
       vector.normalize();
       // スケールを揃えた値を月の座標に割り当てる
+      
       this.moon.position.set(
         vector.x * ThreeApp.MOON_DISTANCE,
         0.0,
         vector.y * ThreeApp.MOON_DISTANCE,
       );
     }, false);
-
+      
     // リサイズイベント
     window.addEventListener('resize', () => {
       this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -236,32 +241,35 @@ class ThreeApp {
     // 球体のジオメトリを生成
     this.sphereGeometry = new THREE.SphereGeometry(0.5, 32, 32);
 
+    // コーンのジオメトリを生成 @@@
+    this.coneGeometry = new THREE.ConeGeometry(0.2, 0.5, 3);
+
     // 地球のマテリアルとメッシュ
     this.earthMaterial = new THREE.MeshPhongMaterial(ThreeApp.MATERIAL_PARAM);
     //this.earthMaterial.map = this.earthTexture;
     this.earth = new THREE.Mesh(this.sphereGeometry, this.earthMaterial);
     this.scene.add(this.earth);
-
+    
     // 月のマテリアルとメッシュ
-    this.moonMaterial = new THREE.MeshPhongMaterial(ThreeApp.MATERIAL_PARAM);
+    this.moonMaterial = new THREE.MeshPhongMaterial(ThreeApp.MATERIAL_PARAM2);
     //this.moonMaterial.map = this.moonTexture;
-    this.moon = new THREE.Mesh(this.sphereGeometry, this.moonMaterial);
+    this.moon = new THREE.Mesh(this.coneGeometry, this.moonMaterial);
     this.scene.add(this.moon);
     // 月はやや小さくして、さらに位置も動かす
     this.moon.scale.setScalar(ThreeApp.MOON_SCALE);
-    this.moon.position.set(ThreeApp.MOON_DISTANCE, 0.0, 0.0);
-
+    this.moon.position.set(this.earth * ThreeApp.MOON_DISTANCE);
+    /*
     // コーンのジオメトリを生成 @@@
     this.coneGeometry = new THREE.ConeGeometry(0.2, 0.5, 32);
     // 人工衛星のマテリアルとメッシュ
-    this.satelliteMaterial = new THREE.MeshPhongMaterial({color: 0xff00dd});
+    this.satelliteMaterial = new THREE.MeshPhongMaterial({color: 0xc9c9c9});
     this.satellite = new THREE.Mesh(this.coneGeometry, this.satelliteMaterial);
     this.scene.add(this.satellite);
     this.satellite.scale.setScalar(0.5);
     // 人工衛星は北極の上あたりに配置し、初期状態は真上に向かって移動するようにしておく @@@
     this.satellite.position.set(0.0, ThreeApp.MOON_DISTANCE, 0.0);
     this.satelliteDirection = new THREE.Vector3(0.0, 1.0, 0.0).normalize();
-
+    */
     // コントロール
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
@@ -288,11 +296,11 @@ class ThreeApp {
     this.controls.update();
 
     // フラグに応じてオブジェクトの状態を変化させる
-    if (this.isDown === true) {
-      this.earth.rotation.y += 0.05;
-      this.moon.rotation.y += 0.05;
-    }
-
+    //if (this.isDown === true) {
+      this.earth.rotation.y += 0.01;
+      //this.moon.rotation.y += 0.05;
+    //}
+    /*
     // (A) 現在（前のフレームまで）の進行方向を変数に保持しておく @@@
     const previousDirection = this.satelliteDirection.clone();
 
@@ -318,7 +326,7 @@ class ThreeApp {
     const qtn = new THREE.Quaternion().setFromAxisAngle(normalAxis, radians);
     // 人工衛星の現在のクォータニオンに乗算する
     this.satellite.quaternion.premultiply(qtn);
-
+    */
     // レンダラーで描画
     this.renderer.render(this.scene, this.camera);
   }
