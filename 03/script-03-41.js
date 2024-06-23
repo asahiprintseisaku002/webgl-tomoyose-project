@@ -367,11 +367,11 @@ class ThreeApp {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
     // ヘルパー
-    
+    /*
     const axesBarLength = 20.0;
     this.axesHelper = new THREE.AxesHelper(axesBarLength);
     this.scene.add(this.axesHelper);
-    
+    */
     // キーの押下状態を保持するフラグ
     this.isDown = false;
 
