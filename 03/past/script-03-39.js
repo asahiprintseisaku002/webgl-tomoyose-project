@@ -37,7 +37,7 @@ class ThreeApp {
   /**
    * 人工衛星の移動速度
    */
-  static SATELLITE_SPEED = 0.05;
+  static SATELLITE_SPEED = 0.005;
   /**
    * 人工衛星の曲がる力
    */
@@ -67,7 +67,7 @@ class ThreeApp {
    * レンダラー定義のための定数
    */
   static RENDERER_PARAM = {
-    clearColor: 0xffffff,
+    clearColor: 0xfc375b,
     width: window.innerWidth,
     height: window.innerHeight,
   };
@@ -76,7 +76,7 @@ class ThreeApp {
    */
   static DIRECTIONAL_LIGHT_PARAM = {
     color: 0xffffff,
-    intensity: 1.0,
+    intensity: 2.0,
     position: new THREE.Vector3(1.0, 1.0, 1.0),
   };
   /**
@@ -90,30 +90,31 @@ class ThreeApp {
    * マテリアル定義のための定数
    */
   static MATERIAL_PARAM = {
-    color: 0x19a8e7,
+    color: 0xe1ff1c,
   };
 
   static MATERIAL_PARAM2 = {
-    color: 0xc9c9c9,
+    color: 0x07f1ff,
+    emissive: 0x07f1ff,
   };
 
   static MATERIAL_PARAM3 = {
-    color: 0x00ffff,
+    color: 0x5b3df1,
     transparent: true,
-    opacity: 0.3
+    opacity: 0.7
   };
 
   static MATERIAL_PARAM4 = {
-    color: 0xe516c9,
+    color: 0xe728ff,
   };
 
   /**
    * フォグの定義のための定数
    */
   static FOG_PARAM = {
-    color: 0xffffff,
-    near: 10.0,
-    far: 20.0,
+    color: 0xfc375b,
+    near: 20.0,
+    far: 50.0,
   };
 
     // Boxを配置する関数
@@ -192,6 +193,7 @@ class ThreeApp {
   isAnimating;
   rect;
   angle;
+  clickState;
 
   /**
    * コンストラクタ
@@ -210,6 +212,8 @@ class ThreeApp {
     this.mouse = new THREE.Vector2();
     this.raycaster = new THREE.Raycaster();
     this.angle = 0;
+    this.clickState = 0;
+
     window.addEventListener('mousemove', (event) => {
         // マウスの位置を正規化します（-1から+1の範囲）。
         this.rect = this.renderer.domElement.getBoundingClientRect();
@@ -222,6 +226,7 @@ class ThreeApp {
     window.addEventListener('keydown', (keyEvent) => {
         switch (keyEvent.key) {
         case ' ':
+         
             if (this.isDown) {
             // スペースキーが離されたときにカメラの位置と向きを元に戻す
             this.camera.position.copy(ThreeApp.CAMERA_PARAM.position);
@@ -239,10 +244,11 @@ class ThreeApp {
             this.currentLookAtPosition = this.endPoint.clone();
 
             }
-    
+          
             break;
         default:
         }
+      
     }, false);
       
     // リサイズイベント
@@ -342,11 +348,11 @@ class ThreeApp {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
     // ヘルパー
-    /*
-    const axesBarLength = 5.0;
+    
+    const axesBarLength = 20.0;
     this.axesHelper = new THREE.AxesHelper(axesBarLength);
     this.scene.add(this.axesHelper);
-    */
+    
     // キーの押下状態を保持するフラグ
     this.isDown = false;
 
@@ -478,17 +484,16 @@ class ThreeApp {
     animate();
   }
   
-
   render() {
     // 恒常ループ
     requestAnimationFrame(this.render);
 
     // コントロールを更新
     this.controls.update();
-    this.satellite.rotation.y += 0.1;
+    this.satellite.rotation.y += 0.01;
 
     //this.group.rotation.y += 0.01;
-    const time = this.clock.getElapsedTime();
+    const time = this.clock.getElapsedTime() / 2;
     // 経過時間をそのままラジアンとしてサインとコサインを求める
     const sin = Math.sin(time);
     const cos = Math.cos(time);
@@ -496,11 +501,11 @@ class ThreeApp {
     this.group2.position.set(
       cos * ThreeApp.MOON_DISTANCE * 3,
       sin * ThreeApp.MOON_DISTANCE * 2,
-      sin * ThreeApp.MOON_DISTANCE * 3,
+      sin * ThreeApp.MOON_DISTANCE * 3
     );
 
     //this.group2.rotation.x = this.angle;
-    this.group2.rotation.z = this.angle * Math.PI;
+    this.group2.rotation.x = this.angle * Math.PI;
     //this.group2.lookAt(this.mouse);
 
     // レンダラーで描画

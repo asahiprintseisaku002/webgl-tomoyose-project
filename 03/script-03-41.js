@@ -79,6 +79,12 @@ class ThreeApp {
     intensity: 2.0,
     position: new THREE.Vector3(1.0, 1.0, 1.0),
   };
+
+  static DIRECTIONAL_LIGHT_PARAM2 = {
+    color: 0xffffff,
+    intensity: 1.0,
+    position: new THREE.Vector3(1.0, 1.0, 1.0),
+  };
   /**
    * アンビエントライト定義のための定数
    */
@@ -194,8 +200,8 @@ class ThreeApp {
   rect;
   angle;
   clickState;
-  currentAngle;
-  targetAngle;
+  initialCameraPosition;
+  initialLookAtPosition;
 
   /**
    * コンストラクタ
@@ -215,15 +221,15 @@ class ThreeApp {
     this.raycaster = new THREE.Raycaster();
     this.angle = 0;
     this.clickState = 0;
-    this.currentAngle = 0;
-    this.targetAngle = 0;
+    this.initialCameraPosition = ThreeApp.CAMERA_PARAM.position.clone();
+    this.initialLookAtPosition = ThreeApp.CAMERA_PARAM.lookAt.clone();
 
     window.addEventListener('mousemove', (event) => {
         // マウスの位置を正規化します（-1から+1の範囲）。
         this.rect = this.renderer.domElement.getBoundingClientRect();
         this.mouse.x =  (event.clientX - this.rect.left) / this.rect.width  * 2 - 1;
         this.mouse.y = -(event.clientY - this.rect.top) / this.rect.height * 2 + 1;
-        this.targetAngle = Math.atan2(this.mouse.y, this.mouse.x);
+        this.angle = Math.atan2(this.mouse.y, this.mouse.x);
       }, false);
 
     // キーの押下や離す操作を検出できるようにする
@@ -233,20 +239,16 @@ class ThreeApp {
          
             if (this.isDown) {
             // スペースキーが離されたときにカメラの位置と向きを元に戻す
-            this.camera.position.copy(ThreeApp.CAMERA_PARAM.position);
-            this.camera.lookAt(ThreeApp.CAMERA_PARAM.lookAt);
+            this.camera.position.copy(this.initialCameraPosition);
+            this.camera.lookAt(this.initialLookAtPosition);
             this.isDown = false;
-
+    
             } else {
-            // スペースキーが押されたときにカメラの位置と向きを更新
-            this.camera.position.copy(this.moon.position); // カメラを月の位置に移動
-            this.camera.lookAt(this.endPoint); // カメラを終点に向ける
-            this.isDown = true;
-
-            // 現在のカメラの位置と視点を保存
-            this.currentCameraPosition = this.camera.position.clone();
-            this.currentLookAtPosition = this.endPoint.clone();
-
+                if (this.moon) {
+                    this.camera.position.copy(this.moon.position); // カメラを月の位置に移動
+                    this.camera.lookAt(this.endPoint); // カメラを終点に向ける
+                    this.isDown = true;
+                }
             }
           
             break;
@@ -254,6 +256,21 @@ class ThreeApp {
         }
       
     }, false);
+
+    // クリックの回数を保持する変数
+    this.clickCount = 0;
+
+    // クリックイベントのリスナー
+    window.addEventListener('click', () => {
+    this.clickCount++;
+
+    // クリックの回数に応じてテキストを更新
+    if (this.clickCount === 1) {
+        document.getElementById('instruction').innerHTML = '2回目のクリックで終点を設定';
+    } else if (this.clickCount === 2) {
+        document.getElementById('instruction').innerHTML = 'スペースキーで視点の切り替え';
+    }
+    });
       
     // リサイズイベント
     window.addEventListener('resize', () => {
@@ -297,6 +314,14 @@ class ThreeApp {
     this.directionalLight.position.copy(ThreeApp.DIRECTIONAL_LIGHT_PARAM.position);
     this.scene.add(this.directionalLight);
 
+    // ディレクショナルライト（平行光源）
+    this.directionalLight2 = new THREE.DirectionalLight(
+        ThreeApp.DIRECTIONAL_LIGHT_PARAM2.color,
+        ThreeApp.DIRECTIONAL_LIGHT_PARAM2.intensity
+        );
+        this.directionalLight2.position.copy(ThreeApp.DIRECTIONAL_LIGHT_PARAM.position);
+        this.scene.add(this.directionalLight2);
+
     // アンビエントライト（環境光）
     this.ambientLight = new THREE.AmbientLight(
       ThreeApp.AMBIENT_LIGHT_PARAM.color,
@@ -320,10 +345,10 @@ class ThreeApp {
     this.moonMaterial = new THREE.MeshPhongMaterial(ThreeApp.MATERIAL_PARAM2);
     //this.moonMaterial.map = this.moonTexture;
     this.moon = new THREE.Mesh(this.coneGeometry, this.moonMaterial);
+    this.moon.position.set(0, 0, 0);
     this.scene.add(this.moon);
     // 月はやや小さくして、さらに位置も動かす
     this.moon.scale.setScalar(ThreeApp.MOON_SCALE);
-    //this.moon.position.set(0, 1, 0);
     this.direction = new THREE.Vector3();
 
     this.coneGeometry2 = new THREE.ConeGeometry(0.1, 0.2, 6);
@@ -433,7 +458,7 @@ class ThreeApp {
     // アニメーション開始時に isAnimating を true に設定
     this.isAnimating = true;
   
-    let speed = 0.005; // 移動速度
+    let speed = 0.003; // 移動速度
     let height = 3; // 移動パスの頂点の高さ
   
     let t = 0; // 始点からの移動距離の比率（0から1）
@@ -476,10 +501,11 @@ class ThreeApp {
           // アニメーションが完了したので、isAnimating を false に設定
           this.isAnimating = false;
 
-          if (this.isDown) {
-            this.camera.position.copy(this.currentCameraPosition);
-            this.camera.lookAt(this.currentLookAtPosition);
-        }
+        // テキストを初期の状態に戻す
+        document.getElementById('instruction').innerHTML = '1回目のクリックで始点を設定';
+
+        // クリックの回数をリセット
+        this.clickCount = 0;
 
         }, 300); 
       }
@@ -508,11 +534,15 @@ class ThreeApp {
       sin * ThreeApp.MOON_DISTANCE * 3
     );
 
-    // 現在の角度を目標の角度に徐々に近づけます
-    this.currentAngle = THREE.MathUtils.lerp(this.currentAngle, this.targetAngle, 0.05);
+    this.directionalLight2.position.set(
+        cos * ThreeApp.MOON_DISTANCE,
+        sin * ThreeApp.MOON_DISTANCE,
+        sin * ThreeApp.MOON_DISTANCE
+      );
 
-    // 衛星の回転を現在の角度に設定します
-    this.group2.rotation.z = this.currentAngle;
+    //this.group2.rotation.x = this.angle;
+    //this.group2.rotation.x = this.angle * Math.PI;
+    this.group2.rotation.z = this.angle * Math.PI;
 
     // レンダラーで描画
     this.renderer.render(this.scene, this.camera);
