@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+            }
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow-x: hidden;
+        }
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        .container {
+            height: 980px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="myCanvas"></canvas>
+
+    <script type="module">
+        import * as THREE from "three";
+        import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+        import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+        import { TransformControls } from 'three/addons/controls/TransformControls.js';
+        import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+
+        // サイズを指定
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+
+        // レンダラーを作成
+        const canvasElement = document.querySelector("#myCanvas");
+        const renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            canvas: canvasElement,
+        });
+        renderer.setClearColor(0xffffff);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(width, height);
+
+        // シーンを作成
+        const scene = new THREE.Scene();
+
+        // カメラを作成
+        const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+        camera.position.set(0, 0, 100);
+        scene.add(camera);
+
+        // ライトを追加
+        const light = new THREE.PointLight(0xffffff, 1, 500);
+        light.position.set(10, 10, 10);
+        scene.add(light);
+
+        // sphereとcornのmeshを定義
+        const sphereGeometry = new THREE.SphereGeometry(5, 32, 32);
+        const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+        scene.add(sphere);
+
+        const cornGeometry = new THREE.ConeGeometry(2, 5, 32);
+        const cornMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const corn = new THREE.Mesh(cornGeometry, cornMaterial);
+        corn.position.set(0, -10, 0); // cornを初期位置に設定
+        scene.add(corn);
+
+        // レイキャスターとマウスのベクトルを定義
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // イベントリスナーを追加
+        window.addEventListener('click', (event) => {
+            // マウス位置を正規化
+            mouse.x = (event.clientX / width) * 2 - 1;
+            mouse.y = -(event.clientY / height) * 2 + 1;
+
+            // レイキャスターを更新
+            raycaster.setFromCamera(mouse, camera);
+
+            // sphereとの交差点を計算
+            const intersects = raycaster.intersectObject(sphere);
+
+            if (intersects.length > 0) {
+                const point = intersects[0].point;
+                if (!startPoint) {
+                    startPoint = point;
+                } else if (!endPoint) {
+                    endPoint = point;
+                    moveCornAlongArc(startPoint, endPoint, centerPoint, radius, startAngle, endAngle);
+                }
+            }
+        });
+
+        let startPoint = null;
+        let endPoint = null;
+        let centerPoint = new THREE.Vector3(0, 0, 0); // 仮の中心点
+        let radius = 10; // 仮の半径
+        let startAngle = 0; // 開始角度（ラジアン）
+        let endAngle = Math.PI / 2; // 終了角度（ラジアン）
+
+        // cornを円弧を描きながら移動させる関数
+        function moveCornAlongArc(start, end, center, radius, startAngle, endAngle) {
+            const moveDuration = 2000; // 移動にかかる時間（ミリ秒）
+            const startTime = Date.now();
+
+            function animate() {
+                const elapsedTime = Date.now() - startTime;
+                const fraction = elapsedTime / moveDuration;
+
+                if (fraction < 1) {
+                    // 角度を計算（ラジアン単位）
+                    const angle = startAngle + (endAngle - startAngle) * fraction;
+
+                    // 円弧上の新しい位置を計算
+                    const newX = center.x + radius * Math.cos(angle);
+                    const newY = center.y + radius * Math.sin(angle);
+
+                    // cornを新しい位置に移動
+                    corn.position.set(newX, newY, corn.position.z);
+
+                    requestAnimationFrame(animate);
+                } else {
+                    // 移動を完了
+                    corn.position.set(end.x, end.y, corn.position.z);
+                }
+            }
+
+            animate();
+        }
+
+        // アニメーションループを作成
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // リサイズイベント発生時に実行
+        window.addEventListener("resize", onResize);
+
+        function onResize() {
+            // サイズを取得
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            // レンダラーのサイズを調整
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(width, height);
+
+            // カメラのアスペクト比を正す
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        }
+    </script>
+</body>
+</html>

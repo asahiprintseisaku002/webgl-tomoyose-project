@@ -2,16 +2,33 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <script src="script-03-240614.js" type="module"></script>
+    <script src="script-03-39.js" type="module"></script>
     <style>
       * {margin: 0; padding: 0;}
       html, body {
         overflow: hidden;
       }
+
+      .text {
+        position: fixed;
+        bottom: 5%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: #42dfe3;
+        z-index: 100;
+        transition: opacity 0.8s;
+      }
     </style>
   </head>
   <body>
     <div id="webgl"></div>
+    <h2 class="text">1回目のクリックで始点を設定<br>2回目のクリックで終点を設定<br>スペースキーで視点切り替え</h2>
+    <script>
+      if (/Mobi|Android/i.test(navigator.userAgent)) {
+          document.querySelector('.text').innerHTML = '1回目のクリックで始点を設定\n2回目のクリックで終点を設定\nスペースキーで視点切り替え'.replace(/\n/g, '<br>');
+      }
+    </script>
   </body>
 </html>
 

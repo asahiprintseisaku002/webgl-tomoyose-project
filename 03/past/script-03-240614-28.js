@@ -50,7 +50,7 @@ class ThreeApp {
     aspect: window.innerWidth / window.innerHeight,
     near: 0.1,
     far: 50.0,
-    position: new THREE.Vector3(0.0, 2.0, 10.0),
+    position: new THREE.Vector3(0.0, 2.0, 7.0),
     lookAt: new THREE.Vector3(0.0, 0.0, 0.0),
   };
   /**
@@ -113,9 +113,27 @@ class ThreeApp {
   moon;               // 月
   moonMaterial;       // 月用マテリアル
   moonTexture;        // 月用テクスチャ
-  satellite;          // 人工衛星
-  satelliteMaterial;  // 人工衛星用マテリアル
-  satelliteDirection; // 人工衛星の進行方向
+  //satellite;          // 人工衛星
+  //satelliteMaterial;  // 人工衛星用マテリアル
+  //satelliteDirection; // 人工衛星の進行方向
+  group;
+  startTime;
+  raycaster;
+  mouse;
+  startPoint;
+  endPoint;
+  intersects;
+  point;
+  direction;
+  distance;
+  moveDuration;
+  markerGeometry;     // マーカージオメトリ
+  markerMaterial;     // マーカーマテリアル
+  startMarker;        // 始点マーカー
+  endMarker;          // 終点マーカー
+  isStartPointSet;    // 始点が設定されているかのフラグ
+  animationId;        // アニメーションID
+  isAnimating;
 
   /**
    * コンストラクタ
@@ -129,6 +147,8 @@ class ThreeApp {
     // 再帰呼び出しのための this 固定
     this.render = this.render.bind(this);
 
+    this.moveDuration = 2000; // 移動時間を 2000 ミリ秒とする
+
     // キーの押下や離す操作を検出できるようにする
     window.addEventListener('keydown', (keyEvent) => {
       switch (keyEvent.key) {
@@ -141,29 +161,6 @@ class ThreeApp {
     window.addEventListener('keyup', (keyEvent) => {
       this.isDown = false;
     }, false);
-
-    // マウスカーソルの動きを検出できるようにする
-    window.addEventListener('pointermove', (pointerEvent) => {
-      // ポインター（マウスカーソル）のクライアント領域上の座標
-      const pointerX = pointerEvent.clientX;
-      const pointerY = pointerEvent.clientY;
-      // 3D のワールド空間に合わせてスケールを揃える
-      const scaleX = pointerX / window.innerWidth * 2.0 - 1.0;
-      const scaleY = pointerY / window.innerHeight * 2.0 - 1.0;
-      // ベクトルを単位化する
-      const vector = new THREE.Vector2(
-        scaleX,
-        scaleY,
-      );
-      vector.normalize();
-      // スケールを揃えた値を月の座標に割り当てる
-      
-      this.moon.position.set(
-        vector.x * ThreeApp.MOON_DISTANCE,
-        0.0,
-        vector.y * ThreeApp.MOON_DISTANCE,
-      );
-    }, false);
       
     // リサイズイベント
     window.addEventListener('resize', () => {
@@ -172,31 +169,7 @@ class ThreeApp {
       this.camera.updateProjectionMatrix();
     }, false);
   }
-
-  /**
-   * アセット（素材）のロードを行う Promise
-   */
-  /*
-  load() {
-    return new Promise((resolve) => {
-      const earthPath = './earth.jpg';
-      const moonPath = './moon.jpg';
-      const loader = new THREE.TextureLoader();
-      loader.load(earthPath, (earthTexture) => {
-        // 地球用
-        this.earthTexture = earthTexture;
-        loader.load(moonPath, (moonTexture) => {
-          // 月用
-          this.moonTexture = moonTexture;
-          resolve();
-        });
-      });
-    });
-  }
-  */
-  /**
-   * 初期化処理
-   */
+  
   init() {
     // レンダラー
     const color = new THREE.Color(ThreeApp.RENDERER_PARAM.clearColor);
@@ -239,7 +212,7 @@ class ThreeApp {
     this.scene.add(this.ambientLight);
 
     // 球体のジオメトリを生成
-    this.sphereGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+    this.sphereGeometry = new THREE.SphereGeometry(1.5, 32, 32);
 
     // コーンのジオメトリを生成 @@@
     this.coneGeometry = new THREE.ConeGeometry(0.2, 0.5, 3);
@@ -257,19 +230,12 @@ class ThreeApp {
     this.scene.add(this.moon);
     // 月はやや小さくして、さらに位置も動かす
     this.moon.scale.setScalar(ThreeApp.MOON_SCALE);
-    this.moon.position.set(this.earth * ThreeApp.MOON_DISTANCE);
-    /*
-    // コーンのジオメトリを生成 @@@
-    this.coneGeometry = new THREE.ConeGeometry(0.2, 0.5, 32);
-    // 人工衛星のマテリアルとメッシュ
-    this.satelliteMaterial = new THREE.MeshPhongMaterial({color: 0xc9c9c9});
-    this.satellite = new THREE.Mesh(this.coneGeometry, this.satelliteMaterial);
-    this.scene.add(this.satellite);
-    this.satellite.scale.setScalar(0.5);
-    // 人工衛星は北極の上あたりに配置し、初期状態は真上に向かって移動するようにしておく @@@
-    this.satellite.position.set(0.0, ThreeApp.MOON_DISTANCE, 0.0);
-    this.satelliteDirection = new THREE.Vector3(0.0, 1.0, 0.0).normalize();
-    */
+    //this.moon.position.set(0, 1, 0);
+    this.direction = new THREE.Vector3();
+
+    const group =new THREE.Group();
+    this.scene.add(group);
+
     // コントロール
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
@@ -283,11 +249,122 @@ class ThreeApp {
 
     // Clock オブジェクトの生成
     this.clock = new THREE.Clock();
-  }
 
-  /**
-   * 描画処理
-   */
+     // レイキャスターとマウスの初期化
+     this.raycaster = new THREE.Raycaster();
+     this.mouse = new THREE.Vector2();
+     this.isStartPointSet = false;
+     this.isAnimating = false;
+ 
+     // マーカーのジオメトリとマテリアルの初期化
+     this.markerGeometry = new THREE.SphereGeometry(0.1, 32, 32);
+     this.markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+ 
+     // イベントリスナーを追加
+     this.renderer.domElement.addEventListener('click', this.setRaycaster.bind(this), false);
+   }
+ 
+   setRaycaster(event) {
+
+    if (this.isAnimating) {
+        return;
+      }
+
+     // マウス位置を正規化
+     this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+     this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+ 
+     // レイキャスターを更新
+     this.raycaster.setFromCamera(this.mouse, this.camera);
+ 
+     // earthMeshとの交差点を計算
+     this.intersects = this.raycaster.intersectObject(this.earth);
+
+     if (this.animationId !== undefined) {
+        cancelAnimationFrame(this.animationId);
+        this.animationId = undefined;
+      }
+ 
+      if (this.intersects.length > 0) {
+        let intersectPoint = this.intersects[0].point;
+        let earthRadius = 1.5; // Earthの半径を適切な値に設定
+    
+        // Earthの中心からの半径と方向で点を再計算
+        let landingPoint = intersectPoint.clone().normalize().multiplyScalar(earthRadius);
+    
+        if (!this.isStartPointSet) {
+          // 始点をEarthの表面に着地させる
+          this.startPoint = landingPoint;
+          this.startMarker = new THREE.Mesh(this.markerGeometry, this.markerMaterial);
+          this.startMarker.position.copy(this.startPoint);
+          this.scene.add(this.startMarker);
+          this.moon.position.copy(this.startPoint); // 月の位置を始点にリセット
+          this.moon.visible = true;
+          this.isStartPointSet = true;
+        } else {
+          // 終点をEarthの表面に着地させる
+          this.endPoint = landingPoint;
+          this.endMarker = new THREE.Mesh(this.markerGeometry, this.markerMaterial);
+          this.endMarker.position.copy(this.endPoint);
+          this.scene.add(this.endMarker);
+    
+          // moveMoonメソッドを呼び出して月の移動を開始
+          this.moveMoon();
+       }
+     }
+   }
+ 
+   moveMoon() {
+    // アニメーション開始時に isAnimating を true に設定
+    this.isAnimating = true;
+  
+    let speed = 0.01; // 移動速度
+    let moonDistance = 1.9; // Earthの中心から月までの距離
+    let height = 3; // 移動パスの頂点の高さ
+  
+    let t = 0; // 始点からの移動距離の比率（0から1）
+  
+    // 始点と終点をEarthに接地させる
+    this.startPoint.normalize().multiplyScalar(moonDistance);
+    this.endPoint.normalize().multiplyScalar(moonDistance);
+  
+    const animate = () => {
+      this.animationId = requestAnimationFrame(animate);
+  
+      // 移動距離の比率を更新
+      t += speed;
+  
+      // 月の位置を更新
+      this.moon.position.lerpVectors(this.startPoint, this.endPoint, t);
+      this.moon.position.y += height * Math.PI * t; // 頂点の高さを調整
+      this.moon.position.normalize().multiplyScalar(moonDistance);
+  
+      // 月の向きを終点に向ける
+      this.moon.lookAt(this.endPoint);
+  
+      // 終点に到達したかチェック
+      if (t >= 1) { // 終点に到達したらアニメーションを停止
+        cancelAnimationFrame(this.animationId);
+        this.animationId = undefined;
+  
+        // マーカーと月のメッシュをシーンから削除
+        this.scene.remove(this.startMarker);
+        this.scene.remove(this.endMarker);
+        this.moon.visible = false;
+  
+        // 始点をリセット
+        this.isStartPointSet = false;
+  
+        // アニメーションが完了したので、isAnimating を false に設定
+        this.isAnimating = false;
+      }
+    };
+  
+    animate();
+  }
+  
+  
+
   render() {
     // 恒常ループ
     requestAnimationFrame(this.render);
@@ -295,38 +372,8 @@ class ThreeApp {
     // コントロールを更新
     this.controls.update();
 
-    // フラグに応じてオブジェクトの状態を変化させる
-    //if (this.isDown === true) {
-      this.earth.rotation.y += 0.01;
-      //this.moon.rotation.y += 0.05;
-    //}
-    /*
-    // (A) 現在（前のフレームまで）の進行方向を変数に保持しておく @@@
-    const previousDirection = this.satelliteDirection.clone();
+    //this.earth.rotation.y += 0.01;
 
-    // (終点 - 始点) という計算を行うことで、２点間を結ぶベクトルを定義
-    const subVector = new THREE.Vector3().subVectors(this.moon.position, this.satellite.position);
-    // 長さに依存せず、向きだけを考えたい場合はベクトルを単位化する
-    subVector.normalize();
-    // 人工衛星の進行方向ベクトルに、向きベクトルを小さくスケールして加算する
-    this.satelliteDirection.add(subVector.multiplyScalar(ThreeApp.SATELLITE_TURN_SCALE));
-    // (B) 加算したことでベクトルの長さが変化するので、単位化してから人工衛星の座標に加算する
-    this.satelliteDirection.normalize();
-    const direction = this.satelliteDirection.clone();
-    this.satellite.position.add(direction.multiplyScalar(ThreeApp.SATELLITE_SPEED));
-
-    // (C) 変換前と変換後の２つのベクトルから外積で法線ベクトルを求める @@@
-    const normalAxis = new THREE.Vector3().crossVectors(previousDirection, this.satelliteDirection);
-    normalAxis.normalize();
-    // (D) 変換前と変換後のふたつのベクトルから内積でコサインを取り出す
-    const cos = previousDirection.dot(this.satelliteDirection);
-    // (D) コサインをラジアンに戻す
-    const radians = Math.acos(cos);
-    // 求めた法線ベクトルとラジアンからクォータニオンを定義
-    const qtn = new THREE.Quaternion().setFromAxisAngle(normalAxis, radians);
-    // 人工衛星の現在のクォータニオンに乗算する
-    this.satellite.quaternion.premultiply(qtn);
-    */
     // レンダラーで描画
     this.renderer.render(this.scene, this.camera);
   }
