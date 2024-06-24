@@ -27,16 +27,26 @@
       .hide {
         opacity: 0;
       }
+
+      #changeViewButton {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        background-color: #4CAF50; /* Green */
+        color: white;
+        padding: 15px 32px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        cursor: pointer;
+    }
     </style>
   </head>
   <body>
     <div id="webgl"></div>
     <h2 id="instruction" class="text">1回目のクリックで始点を設定</h2>
-    <script>
-      if (/Mobi|Android/i.test(navigator.userAgent)) {
-          document.querySelector('.text').innerHTML = '1st Tap sets the starpoint\n2nd Tap sets the endpoint\nSpace Bar to Change View'.replace(/\n/g, '<br>');
-      }
-    </script>
   </body>
 </html>
 
