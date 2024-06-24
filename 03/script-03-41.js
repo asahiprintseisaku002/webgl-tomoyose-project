@@ -442,6 +442,34 @@ class ThreeApp {
           this.moveMoon();
        }
      }
+
+  // タッチイベント（またはマウスイベント）のリスナーを追加
+  window.addEventListener('touchstart', onTouchStart, false);
+
+  function onTouchStart(event) {
+      event.preventDefault();
+
+      // マウス（またはタッチ）の位置を正規化
+      mouse.x = (event.touches[0].clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.touches[0].clientY / window.innerHeight) * 2 + 1;
+
+      // レイキャスターを更新
+      raycaster.setFromCamera(mouse, camera);
+
+      // レイと交差するオブジェクトの配列を取得
+      const intersects = raycaster.intersectObjects(scene.children);
+
+      // 交差するオブジェクトがある場合
+      for (let i = 0; i < intersects.length; i++) {
+          // 交差するオブジェクトがmoonメッシュの場合
+          if (intersects[i].object === moon) {
+              // カメラの位置と向きを変更
+              camera.position.copy(moon.position); // カメラを月の位置に移動
+              camera.lookAt(endPoint); // カメラを終点に向ける
+          }
+      }
+  }
+
    }
  
    moveMoon() {
