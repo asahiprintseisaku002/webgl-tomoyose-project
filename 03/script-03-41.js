@@ -247,26 +247,6 @@ class ThreeApp {
       
     }, false);
 
-    // JavaScript
-    if (/Mobi|Android/i.test(navigator.userAgent)) {
-      document.querySelector('#changeViewButton').style.display = 'block';
-    }
-
-    document.querySelector('#changeViewButton').addEventListener('click', function() {
-      if (this.isDown) {
-          // ボタンがクリックされたときにカメラの位置と向きを元に戻す
-          this.camera.position.copy(this.initialCameraPosition);
-          this.camera.lookAt(this.initialLookAtPosition);
-          this.isDown = false;
-      } else {
-          if (this.moon) {
-              this.camera.position.copy(this.moon.position); // カメラを月の位置に移動
-              this.camera.lookAt(this.endPoint); // カメラを終点に向ける
-              this.isDown = true;
-          }
-      }
-    });
-
     // クリックの回数を保持する変数
     this.clickCount = 0;
 
