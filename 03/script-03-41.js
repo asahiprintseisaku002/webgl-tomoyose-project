@@ -247,26 +247,6 @@ class ThreeApp {
       
     }, false);
 
-    let touchInProgress = false;
-
-    window.addEventListener('touchstart', (touchEvent) => {
-        if (!touchInProgress) {
-            if (this.moon) {
-                this.camera.position.copy(this.moon.position); // カメラを月の位置に移動
-                this.camera.lookAt(this.endPoint); // カメラを終点に向ける
-                touchInProgress = true;
-            }
-        }
-    }, false);
-    
-    window.addEventListener('touchend', (touchEvent) => {
-        if (touchInProgress) {
-            this.camera.position.copy(this.initialCameraPosition);
-            this.camera.lookAt(this.initialLookAtPosition);
-            touchInProgress = false;
-        }
-    }, false);
-
     // クリックの回数を保持する変数
     this.clickCount = 0;
 
