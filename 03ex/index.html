@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <script src="script-03-41-01.js" type="module"></script>
+    <style>
+      * {margin: 0; padding: 0;}
+      html, body {
+        overflow: hidden;
+      }
+
+      .text {
+        position: fixed;
+        bottom: 15%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: #0efdfd;
+        z-index: 100;
+        transition: opacity 0.8s;
+      }
+
+      .show {
+        opacity: 1;
+      }
+
+      .hide {
+        opacity: 0;
+      }
+
+    </style>
+  </head>
+  <body>
+    <div id="webgl"></div>
+    <h2 id="instruction" class="text">1回目のクリックで始点を設定</h2>
+  </body>
+</html>
+
