@@ -174,7 +174,6 @@ class ThreeApp {
     // コントロール
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
-    this.scene.add(this.svg);
   }
 
   load() {
@@ -206,6 +205,7 @@ class ThreeApp {
 
         // あとで使えるようにプロパティに代入しておく
         this.svg = group;
+        this.scene.add(this.svg);
         resolve();
       });
     });

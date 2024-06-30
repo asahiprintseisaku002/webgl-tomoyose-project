@@ -233,7 +233,7 @@ class ThreeApp {
         this.mouse.y = -(event.clientY - this.rect.top) / this.rect.height * 2 + 1;
         this.angle = Math.atan2(this.mouse.y, this.mouse.x);
       }, false);
-
+      /*
     // キーの押下や離す操作を検出できるようにする
     window.addEventListener('keydown', (keyEvent) => {
         switch (keyEvent.key) {
@@ -273,7 +273,7 @@ class ThreeApp {
         document.getElementById('instruction').innerHTML = 'スペースキーで視点の切り替え';
     }
     });
-      
+      */
     // リサイズイベント
     window.addEventListener('resize', () => {
       this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -315,6 +315,13 @@ class ThreeApp {
         this.randomizeTarget();
         this.setYaw();
         this.setTime(0.0);
+    });
+    pane.addButton({
+        title: 'GO!'
+    }).on('click', (v)=>{
+        this.satelliteOuter.rotation.x = 1;
+        //this.setTime(0.0);
+        this.setHeight(0.0);
     });
 
   }
@@ -527,7 +534,7 @@ class ThreeApp {
 
   setHeight(time) {
     // 高さの範囲と周期を設定
-    const minHeight = 1.5;
+    const minHeight = 0.0;
     const maxHeight = 3.0;
     const period = 1.0;  // targetPointに到達するまでの時間
   
@@ -535,6 +542,6 @@ class ThreeApp {
     const height = minHeight + (maxHeight - minHeight) * (1 + Math.sin(2 * Math.PI * time / period)) / 2;
   
     // satelliteの高さを設定
-    this.satellite.position.y = height;
+    this.satelliteOuter.position.y = height;
   }
 }

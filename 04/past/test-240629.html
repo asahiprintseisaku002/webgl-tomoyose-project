@@ -1,0 +1,196 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+       <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.152.2/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.152.2/examples/jsm/"
+        }
+      }
+    </script>
+    
+    <script type="module">
+      import * as THREE from "three";
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+      //import { FontLoader } from "three/addons/loaders/FontLoader.js";
+      //import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
+      //import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+      import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
+      import { TransformControls } from 'three/addons/controls/TransformControls.js';
+      import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+
+      let scene, camera, renderer, raycaster, mouse;
+      let planes = [];
+      let planeMaterials = [];
+      let particles;
+      let canvasElement;
+
+      function init() {
+        // シーン、カメラ、レンダラーの初期化
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        canvasElement = document.querySelector("#myCanvas");
+        renderer = new THREE.WebGLRenderer({
+          canvas: document.querySelector('#myCanvas'), //背景のグラデーションを反映、最下段の<canvas>タグのIDがmyCanvas,cssは上段の<style>内
+          alpha: false
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+
+        // レイキャスターとマウスベクトルの初期化
+        raycaster = new THREE.Raycaster();
+        mouse = new THREE.Vector2();
+
+        // OrbitControlsの初期化
+        const controls = new OrbitControls(camera, renderer.domElement);
+
+        // パーティクルの初期化（ここでは単純な点を作成）
+        const particleMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.25, sizeAttenuation: true });
+        const particleGeometry = new THREE.BufferGeometry();
+        const COUNT = 10;    // パーティクルの行と列のカウント数
+        const WIDTH = 10.0;  // どの程度の範囲に配置するかの幅
+        const vertices = []; // まず頂点情報を格納する単なる配列（Array）
+        for (let i = 0; i <= COUNT; ++i) {
+          // カウンタ変数 i から X 座標を算出
+          const x = (i / COUNT - 0.5) * WIDTH;
+          for(let j = 0; j <= COUNT; ++j){
+            // カウンタ変数 j から Y 座標を算出
+            const y = (j / COUNT - 0.5) * WIDTH;
+            // 配列に頂点を加える
+            vertices.push(x, y, 0.0);
+          }
+        }
+        const stride = 3;
+        const attribute = new THREE.BufferAttribute(new Float32Array(vertices), stride);
+        particleGeometry.setAttribute('position', attribute);
+        particles = new THREE.Points(particleGeometry, particleMaterial); // particlesを初期化
+        scene.add(particles);
+
+        const planeGroup = new THREE.Group();
+        // PlaneGeometryの板を3枚作成し、シーンに追加
+        const planeGeometry = new THREE.PlaneGeometry(1, 1);
+        for (let i = 0; i < 3; i++) {
+          const planeMaterial = new THREE.MeshBasicMaterial({ color: 0x363636, side: THREE.DoubleSide });
+          const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+          plane.position.x = i * 2 - 2; // 板をX軸に沿って配置
+          plane.position.y = -5;
+          plane.position.z = 10;
+          planes.push(plane);
+          planeMaterials.push(planeMaterial);
+          scene.add(plane);
+        }
+
+        const loader = new SVGLoader();
+        const svgFiles = ['./moon.svg', './star.svg', './diamond.svg'];
+
+        for (let i = 0; i < 3; i++) {
+          loader.load(svgFiles[i], data => {
+            const paths = data.paths;
+            const group = new THREE.Group();
+            group.scale.multiplyScalar(0.1);
+            group.scale.y *= -1;
+
+            for (let j = 0; j < paths.length; j++) {
+              const path = paths[j];
+              const material = new THREE.MeshBasicMaterial({
+                color: path.color,
+                side: THREE.DoubleSide,
+                depthWrite: false
+              });
+
+              const shapes = path.toShapes(true);
+
+              for (let k = 0; k < shapes.length; k++) {
+                const shape = shapes[k];
+                const geometry = new THREE.ShapeGeometry(shape);
+                const mesh = new THREE.Mesh(geometry, material);
+                group.add(mesh);
+              }
+            }
+
+              // SVGデータを描画するためのHTMLの<img>要素を作成
+              const img = document.createElement('img');
+              img.src = group; // SVGデータを<img>要素に描画
+
+              img.onload = function() {
+                // <img>要素がロードされたら、それをTHREE.CanvasTextureに渡す
+                const svgTexture = new THREE.CanvasTexture(img);
+                svgTexture.needsUpdate = true;
+                planeMaterials[i].map = svgTexture;
+                planeMaterials[i].needsUpdate = true; // マテリアルが更新されるように設定
+              };
+            });
+        }
+        // カメラの位置を設定
+        camera.position.z = 20;
+
+        // マウス移動イベントのリスナーを追加
+        window.addEventListener('mousemove', onMouseMove, false);
+
+        // マウスクリックイベントのリスナーを追加
+        window.addEventListener('click', onMouseClick, false);
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+      }
+
+      function onMouseMove(event) {
+        // マウス位置を正規化
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        // レイキャスターを更新
+        raycaster.setFromCamera(mouse, camera);
+
+        // レイと交差するオブジェクトを計算
+        const intersects = raycaster.intersectObjects(planes);
+
+        // 板の色をリセット
+        for (let i = 0; i < planes.length; i++) {
+          planeMaterials[i].color.set(0x363636);
+        }
+
+        // マウスカーソルが当たった板の色を変更
+        for (let i = 0; i < intersects.length; i++) {
+          intersects[i].object.material.color.set(0xff0000);
+          console.log('change!');
+        }
+      }
+
+      function onMouseClick(event) {
+        // レイキャスターを更新
+        raycaster.setFromCamera(mouse, camera);
+
+        // レイと交差するオブジェクトを計算
+        const intersects = raycaster.intersectObjects(planes);
+
+        // 色が変わった板をクリックした場合、そのテクスチャのSVGの形状にパーティクルを変更
+        for (let i = 0; i < intersects.length; i++) {
+          if (intersects[i].object.material.color.getHex() === 0xff0000) {
+            particles.material.map = intersects[i].object.material.map;
+            //console.log('click!');
+          }
+        }
+      }
+
+      init();
+      animate();
+    </script>
+  </head>
+  <body>
+    <canvas id="myCanvas">
+    </canvas>
+  </body>
+</html>

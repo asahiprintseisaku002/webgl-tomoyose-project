@@ -233,7 +233,7 @@ class ThreeApp {
         this.mouse.y = -(event.clientY - this.rect.top) / this.rect.height * 2 + 1;
         this.angle = Math.atan2(this.mouse.y, this.mouse.x);
       }, false);
-
+      /*
     // キーの押下や離す操作を検出できるようにする
     window.addEventListener('keydown', (keyEvent) => {
         switch (keyEvent.key) {
@@ -273,7 +273,7 @@ class ThreeApp {
         document.getElementById('instruction').innerHTML = 'スペースキーで視点の切り替え';
     }
     });
-      
+      */
     // リサイズイベント
     window.addEventListener('resize', () => {
       this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -315,6 +315,15 @@ class ThreeApp {
         this.randomizeTarget();
         this.setYaw();
         this.setTime(0.0);
+        this.setPitch(Math.PI / 6);
+    });
+    pane.addButton({
+        title: 'GO!'
+    }).on('click', ()=>{
+        this.setTime(0.0);
+        this.setHeight(1.5);
+        this.setPitch(Math.PI / 6);
+        this.startAnimation();
     });
 
   }
@@ -503,17 +512,29 @@ class ThreeApp {
   }
 
   setYaw() {
-    this.satelliteWorid = this.satelliteInner.getWorldPosition(new THREE.Vector3);
-    this.toSatellite = this.satelliteWorid.clone().normalize();
+    this.satelliteWorld = this.satelliteInner.getWorldPosition(new THREE.Vector3);
+    this.toSatellite = this.satelliteWorld.clone().normalize();
     this.targetWorld = this.target.getWorldPosition(new THREE.Vector3());
     this.toTarget = this.targetWorld.clone().normalize();
     this.tangent = new THREE.Vector3().crossVectors(this.toSatellite, this.toTarget).normalize();
     this.binomal = new THREE.Vector3().crossVectors(this.tangent, this.toSatellite).normalize();
 
-    const lookAtPoint = new THREE.Vector3().addVectors(this.satelliteWorid, this.binomal);
+    const lookAtPoint = new THREE.Vector3().addVectors(this.satelliteWorld, this.binomal);
     this.satelliteInner.lookAt(lookAtPoint);
 
     this.baseQuaternion = this.satelliteOuter.quaternion.clone();
+  }
+
+  setHeight(height) {
+    // 高さを設定
+    this.height = height;
+    this.satelliteInner.position.y = this.height;
+  }
+
+  setPitch(pitch) {
+    // ピッチを設定
+    this.pitch = pitch;
+    this.satellite.rotation.x = this.pitch;
   }
 
   setTime(time) {
@@ -523,18 +544,31 @@ class ThreeApp {
     const q = new THREE.Quaternion().setFromAxisAngle(this.tangent, radians);
     const rotation = this.baseQuaternion.clone().premultiply(q);
     this.satelliteOuter.quaternion.copy(rotation); 
+
+    // 高さを更新
+    if (this.time <= 0.5) {
+        this.setHeight(1.5 + this.time * 3.0);
+    } else {
+        this.setHeight(3.0 - (this.time - 0.5) * 3.0);
+    }
+
+    if (this.time <= 0.5) {
+        this.setPitch(Math.PI / 6 + this.time * Math.PI / 3);
+    } else {
+        this.setPitch(Math.PI / 2 - (1.0 - this.time) * Math.PI / 6 - Math.PI / 6);
+    }
+
+
   }
 
-  setHeight(time) {
-    // 高さの範囲と周期を設定
-    const minHeight = 1.5;
-    const maxHeight = 3.0;
-    const period = 1.0;  // targetPointに到達するまでの時間
-  
-    // サイン波を使用して高さを計算
-    const height = minHeight + (maxHeight - minHeight) * (1 + Math.sin(2 * Math.PI * time / period)) / 2;
-  
-    // satelliteの高さを設定
-    this.satellite.position.y = height;
+  startAnimation() {
+    const animate = () => {
+        this.setTime(this.time + 0.005);
+        if (this.time < 1.0) {
+            requestAnimationFrame(animate);
+        }
+    };
+    animate();
   }
+
 }
