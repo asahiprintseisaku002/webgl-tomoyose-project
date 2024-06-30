@@ -80,7 +80,7 @@
         // PlaneGeometryの板を3枚作成し、シーンに追加
         const planeGeometry = new THREE.PlaneGeometry(1, 1);
         for (let i = 0; i < 3; i++) {
-          const planeMaterial = new THREE.MeshBasicMaterial({ color: 0x363636, side: THREE.DoubleSide });
+          const planeMaterial = new THREE.MeshBasicMaterial({ color: 0xb0b0b0, side: THREE.DoubleSide });
           const plane = new THREE.Mesh(planeGeometry, planeMaterial);
           plane.position.x = i * 2 - 2; // 板をX軸に沿って配置
           plane.position.y = -5;
@@ -91,7 +91,9 @@
         }
 
         const loader = new SVGLoader();
-        const svgFiles = ['./moon.svg', './star.svg', './diamond.svg'];
+        const svgFiles = ['./moon.svg',
+                          './star.svg', 
+                          './diamond.svg'];
 
         for (let i = 0; i < 3; i++) {
           loader.load(svgFiles[i], data => {
