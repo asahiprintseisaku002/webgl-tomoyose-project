@@ -8,6 +8,7 @@
 import * as THREE from '../lib/three.module.js';
 import { OrbitControls } from '../lib/OrbitControls.js';
 import { SVGLoader } from '../lib/SVGLoader.js';
+import { GLTFLoader } from '../lib/GLTFLoader.js';
 
 window.addEventListener('DOMContentLoaded', async () => {
   const wrapper = document.querySelector('#webgl');
@@ -26,14 +27,14 @@ class ThreeApp {
     aspect: window.innerWidth / window.innerHeight,
     near: 0.1,
     far: 300.0,
-    position: new THREE.Vector3(0.0, 2.0, 10.0),
+    position: new THREE.Vector3(0.0, 2.0, 20.0),
     lookAt: new THREE.Vector3(0.0, 0.0, 0.0),
   };
   /**
    * レンダラー定義のための定数
    */
   static RENDERER_PARAM = {
-    clearColor: 0x000000, // パーティクルが目立つように背景は黒に @@@
+    clearColor: 0x0b0b0b, // パーティクルが目立つように背景は黒に @@@
     width: window.innerWidth,
     height: window.innerHeight,
   };
@@ -46,6 +47,19 @@ class ThreeApp {
     sizeAttenuation: true // 遠近感を出すかどうかの真偽値
   };
 
+  //ライト
+  static DIRECTIONAL_LIGHT_PARAM = {
+    color: 0xffffff,
+    intensity: 1.0,
+    position: new THREE.Vector3(1.0, 1.0, 1.0),
+  };
+
+  static AMBIENT_LIGHT_PARAM = {
+    color: 0xffffff,
+    intensity: 0.1,
+  };
+  //ライトここまで
+
   wrapper;          // canvas の親要素
   renderer;         // レンダラ
   scene;            // シーン
@@ -57,6 +71,9 @@ class ThreeApp {
   axesHelper;       // 軸ヘルパー
   svg;
   loader;
+  moon;
+  star;
+  diamond;
 
   /**
    * コンストラクタ
@@ -102,19 +119,24 @@ class ThreeApp {
     this.camera.position.copy(ThreeApp.CAMERA_PARAM.position);
     this.camera.lookAt(ThreeApp.CAMERA_PARAM.lookAt);
 
+    // ディレクショナルライト（平行光源）
+    this.directionalLight = new THREE.DirectionalLight(
+      ThreeApp.DIRECTIONAL_LIGHT_PARAM.color,
+      ThreeApp.DIRECTIONAL_LIGHT_PARAM.intensity
+    );
+    this.directionalLight.position.copy(ThreeApp.DIRECTIONAL_LIGHT_PARAM.position);
+    this.scene.add(this.directionalLight);
+
+    // アンビエントライト（環境光）
+    this.ambientLight = new THREE.AmbientLight(
+      ThreeApp.AMBIENT_LIGHT_PARAM.color,
+      ThreeApp.AMBIENT_LIGHT_PARAM.intensity,
+    );
+    this.scene.add(this.ambientLight);
+
     // パーティクル用のマテリアル @@@
     this.material = new THREE.PointsMaterial(ThreeApp.MATERIAL_PARAM);
 
-    // - パーティクルを定義する -----------------------------------------------
-    // なんらかの形状をあらかじめ持っているビルトインの各種ジオメトリとは違い
-    // BufferGeometry には、最初の段階では一切頂点が含まれていません。
-    // この BufferGeometry というオブジェクトは、three.js のすべてのビルトインジ
-    // オメトリのベースになっているオブジェクトです。（すべてのジオメトリがこの
-    // クラスを継承している）
-    // この空のジオメトリに頂点を追加するには、まず配列を用意し、そこに必要な情
-    // 報を格納していきます。ここでは最も単純な頂点に関する情報である「頂点座標」
-    // をジオメトリに対して追加していく方法を見てみましょう。
-    // ------------------------------------------------------------------------
     // パーティクルの定義 @@@
     this.geometry = new THREE.BufferGeometry(); // 特定の形状を持たないジオメトリ
     const COUNT = 10;    // パーティクルの行と列のカウント数
@@ -130,41 +152,17 @@ class ThreeApp {
         vertices.push(x, y, 0.0);
       }
     }
-    // - 定義した頂点の情報を加工する -----------------------------------------
-    // three.js では、ジオメトリに頂点の情報を設定する（上書きや追加する） 場合
-    // は、BufferAttribute というクラスを利用します。
-    // また、この BufferAttribute クラスは、データの入力として TypedArray を使い
-    // ますので、混乱しないように落ち着いて、どのような処理が行われているのか確
-    // 認しましょう。
-    // ポイントは、適切な TypedArray を利用すること。また、データの個数がいくつ
-    // でワンセットになっているのか（ストライド）を忘れずに指定します。
-    // ※ストライドは three.js のドキュメントなどでは itemSize と記載されている
-    // ------------------------------------------------------------------------
+
     // この頂点情報がいくつの要素からなるか（XYZ なので、３を指定）
     const stride = 3;
-    // BufferAttribute の生成
-    const attribute = new THREE.BufferAttribute(new Float32Array(vertices), stride);
-    // position という名前に対して BufferAttribute を割り当てる
-    this.geometry.setAttribute('position', attribute);
-    // - attribute の名称 -----------------------------------------------------
-    // 今回は、頂点の「座標」を TypedArray に変換して、それをジオメトリに対して
-    // セットしています。そこで 'position' という名前を指定していますが、これを
-    // たとえば 'pos' のように、独自の文言に変更することができるのか、疑問に感じ
-    // た方もいたかもしれません。
-    // この「頂点に割り当てられている属性値の名称」には、いくつかの制限がありま
-    // す。より正確には、内部的に利用されるシェーダの実装に依存します。このあた
-    // りの話は、いずれ WebGL のネイティブな API を扱うタイミングで、シェーダに
-    // ついての理解が深まると自然となにをやっているのかがわかるようになります。
-    // 今回のケースでは、頂点の座標を扱うための名前が three.js では 'position'
-    // に固定されているので、それに合わせてこのようになっています。ですから独自
-    // に 'pos' のような名前を指定してもうまくいきませんので注意しましょう。
-    // ------------------------------------------------------------------------
 
-    // パーティクルを格納したジオメトリとマテリアルからポイントオブジェクトを生成
-    // ※ポイントオブジェクトは、頂点１つを「点」として描画するジオメトリの形態です
+    const attribute = new THREE.BufferAttribute(new Float32Array(vertices), stride);
+    this.geometry.setAttribute('position', attribute);
     this.points = new THREE.Points(this.geometry, this.material);
-    // シーンにパーティクルを追加
-    //this.scene.add(this.points);
+   
+    this.scene.add(this.points);
+
+    this.scene.add(this.gltf.scene);
 
     // 軸ヘルパー
     const axesBarLength = 20.0;
@@ -177,39 +175,24 @@ class ThreeApp {
   }
 
   load() {
+    const paths = ['./moon.glb', './star.glb', './diamond.glb'];
+    return Promise.all(paths.map((path, index) => this.loadModel(path, index)));
+  }
+  
+  loadModel(path, index) {
     return new Promise((resolve) => {
-      // 読み込むファイルのパス
-      const svgPath = 'moon.svg';
-      const loader = new SVGLoader();
-      loader.load(svgPath, (data) => {
-        const paths = data.paths;
-        const group = new THREE.Group();
-
-        for (let i = 0; i < paths.length; i++) {
-          const path = paths[i];
-          const material = new THREE.MeshBasicMaterial({
-            color: path.color,
-            side: THREE.DoubleSide,
-            depthWrite: false
-          });
-
-          const shapes = path.toShapes(true);
-
-          for (let j = 0; j < shapes.length; j++) {
-            const shape = shapes[j];
-            const geometry = new THREE.ShapeGeometry(shape);
-            const mesh = new THREE.Mesh(geometry, material);
-            group.add(mesh);
-          }
-        }
-
+      const loader = new GLTFLoader();
+      loader.load(path, (gltf) => {
+        // モデルの位置を設定
+        gltf.scene.position.x = index * 2; // 2はモデル間の距離を表します。必要に応じて調整してください。
+  
         // あとで使えるようにプロパティに代入しておく
-        this.svg = group;
-        this.scene.add(this.svg);
+        this.gltf = gltf;
         resolve();
       });
     });
   }
+
 
   /**
    * 描画処理

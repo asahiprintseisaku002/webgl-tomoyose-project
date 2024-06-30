@@ -33,6 +33,7 @@
       let planeMaterials = [];
       let particles;
       let canvasElement;
+      let moonPlane, starPlane, diamondPlane;
 
       function init() {
         // シーン、カメラ、レンダラーの初期化
@@ -79,6 +80,7 @@
         const planeGroup = new THREE.Group();
         // PlaneGeometryの板を3枚作成し、シーンに追加
         const planeGeometry = new THREE.PlaneGeometry(1, 1);
+       
         for (let i = 0; i < 3; i++) {
           const planeMaterial = new THREE.MeshBasicMaterial({ color: 0xb0b0b0, side: THREE.DoubleSide });
           const plane = new THREE.Mesh(planeGeometry, planeMaterial);
@@ -88,51 +90,22 @@
           planes.push(plane);
           planeMaterials.push(planeMaterial);
           scene.add(plane);
+          if (i === 0) moonPlane = plane;
+          else if (i === 1) starPlane = plane;
+          else if (i === 2) diamondPlane = plane;
         }
 
-        const loader = new SVGLoader();
-        const svgFiles = ['./moon.svg',
-                          './star.svg', 
-                          './diamond.svg'];
+        const loader = new THREE.TextureLoader();
+        const Files = ['./moon.png', './star.png', './diamond.png'];
 
         for (let i = 0; i < 3; i++) {
-          loader.load(svgFiles[i], data => {
-            const paths = data.paths;
-            const group = new THREE.Group();
-            group.scale.multiplyScalar(0.1);
-            group.scale.y *= -1;
-
-            for (let j = 0; j < paths.length; j++) {
-              const path = paths[j];
-              const material = new THREE.MeshBasicMaterial({
-                color: path.color,
-                side: THREE.DoubleSide,
-                depthWrite: false
-              });
-
-              const shapes = path.toShapes(true);
-
-              for (let k = 0; k < shapes.length; k++) {
-                const shape = shapes[k];
-                const geometry = new THREE.ShapeGeometry(shape);
-                const mesh = new THREE.Mesh(geometry, material);
-                group.add(mesh);
-              }
-            }
-
-              // SVGデータを描画するためのHTMLの<img>要素を作成
-              const img = document.createElement('img');
-              img.src = group; // SVGデータを<img>要素に描画
-
-              img.onload = function() {
-                // <img>要素がロードされたら、それをTHREE.CanvasTextureに渡す
-                const svgTexture = new THREE.CanvasTexture(img);
-                svgTexture.needsUpdate = true;
-                planeMaterials[i].map = svgTexture;
-                planeMaterials[i].needsUpdate = true; // マテリアルが更新されるように設定
-              };
-            });
+          loader.load(Files[i], function(texture) {
+            // テクスチャがロードされたら、それをマテリアルに適用
+            planeMaterials[i].map = texture;
+            planeMaterials[i].needsUpdate = true; // マテリアルが更新されるように設定
+          });
         }
+        
         // カメラの位置を設定
         camera.position.z = 20;
 
@@ -178,12 +151,36 @@
         // レイと交差するオブジェクトを計算
         const intersects = raycaster.intersectObjects(planes);
 
+        const moonPathData = "M678.6,634.6c-167.2,0-302.7-135.5-302.7-302.7s47-185.9,119.8-241.1c-225.1,8.6-405,193.8-405,421s188.6,421.3,421.3,421.3,421.3-188.6,421.3-421.3-.1-10.6-.3-15.9c-53.9,83.4-147.7,138.7-254.4,138.7Z";
+        const starPathData = "512 104.4 613.2 415.8 940.5 415.8 675.7 608.2 776.9 919.6 512 727.1 247.1 919.6 348.3 608.2 83.5 415.8 410.8 415.8 512 104.4";
+        const diamondPathData = "719.2 153.1 304.8 153.1 97.6 327.3 512 870.9 926.4 327.3 719.2 153.1";
         // 色が変わった板をクリックした場合、そのテクスチャのSVGの形状にパーティクルを変更
         for (let i = 0; i < intersects.length; i++) {
           if (intersects[i].object.material.color.getHex() === 0xff0000) {
-            particles.material.map = intersects[i].object.material.map;
-            //console.log('click!');
+            let svgPathData;
+            if (intersects[i].object === moonPlane) {
+              svgPathData = moonPathData;
+            } else if (intersects[i].object === starPlane) {
+              svgPathData = starPathData;
+            } else if (intersects[i].object === diamondPlane) {
+              svgPathData = diamondPathData;
+            }
+            const vertices = parseSvgPathData(svgPathData);
+            particles.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
           }
+        }
+      }
+              function parseSvgPathData(svgPathData) {
+          const splitData = svgPathData.split(' ');
+          const vertices = [];
+          splitData.forEach(data => {
+            if (data.includes(',')) {
+              const [x, y] = data.split(',');
+              vertices.push(parseFloat(x), parseFloat(y), 0.0);
+            }
+          });
+          console.log(vertices);
+          return vertices;
         }
 
       window.addEventListener('resize', () => {
@@ -191,7 +188,7 @@
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         }, false);
-      }
+      
 
       init();
       animate();
