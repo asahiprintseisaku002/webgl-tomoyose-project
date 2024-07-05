@@ -2,16 +2,34 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <script src="script-04-01.js" type="module"></script>
+    <script src="script-04-15.js" type="module"></script>
     <style>
       * {margin: 0; padding: 0;}
       html, body {
         overflow: hidden;
       }
+
+      .text {
+        position: fixed;
+        bottom: 10%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: #ffffff;
+        z-index: 100;
+        transition: opacity 0.8s;
+      }
     </style>
   </head>
   <body>
-    <div id="webgl"></div>
+    <div id="webgl">
+      <h2 class="text">Please click on the Icons！</h2>
+    </div>
+    <script>
+      if (/Mobi|Android/i.test(navigator.userAgent)) {
+        document.querySelector('.text').textContent = 'Please Tap on the Icons!';
+      }
+    </script>
   </body>
 </html>
 

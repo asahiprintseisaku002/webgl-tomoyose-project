@@ -10,10 +10,10 @@ import { OrbitControls } from '../lib/OrbitControls.js';
 import { SVGLoader } from '../lib/SVGLoader.js';
 import { GLTFLoader } from '../lib/GLTFLoader.js';
 
-window.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded', /*async*/ () => {
   const wrapper = document.querySelector('#webgl');
   const app = new ThreeApp(wrapper);
-  await app.load();
+  //await app.load();
   app.init();
   app.render();
 }, false);
@@ -47,6 +47,12 @@ class ThreeApp {
     sizeAttenuation: true // 遠近感を出すかどうかの真偽値
   };
 
+  static MATERIAL_PARAM2 = {
+    color: 0xb0b0b0,
+    side: THREE.DoubleSide,
+    transparent: true
+  }
+
   //ライト
   static DIRECTIONAL_LIGHT_PARAM = {
     color: 0xffffff,
@@ -60,20 +66,40 @@ class ThreeApp {
   };
   //ライトここまで
 
+  static INTERSECTION_MATERIAL_PARAM = {
+    color: 0x00ffff,
+  };
+
   wrapper;          // canvas の親要素
   renderer;         // レンダラ
   scene;            // シーン
   camera;           // カメラ
   geometry;         // ジオメトリ
   material;         // マテリアル
+  plane;
+  planes;
+  planeGroup;
+  planeGeometry;
+  planeMaretial;
+  planeMaretials;
+  texture;
   points;           // パーティクルの実態（点群のメッシュに相当） @@@
   controls;         // オービットコントロール
   axesHelper;       // 軸ヘルパー
   svg;
-  loader;
+  gltfLoader;
+  imageLoader;
+  images;
   moon;
+  moonplane;
   star;
+  starplne;
   diamond;
+  diamondplane;
+  raycaster;
+  hitMaterial;
+  currentGeometryIndex;
+  mouse;
 
   /**
    * コンストラクタ
@@ -86,6 +112,50 @@ class ThreeApp {
 
     // this のバインド
     this.render = this.render.bind(this);
+    
+    this.raycaster = new THREE.Raycaster();
+    this.mouse = new THREE.Vector2();
+    
+    // マウスオーバーイベント
+    window.addEventListener('mousemove', (mouseEvent) => {
+      const x = mouseEvent.clientX / window.innerWidth * 2.0 - 1.0;
+      const y = mouseEvent.clientY / window.innerHeight * 2.0 - 1.0;
+      const v = new THREE.Vector2(x, -y);
+      this.raycaster.setFromCamera(v, this.camera);
+      const intersects = this.raycaster.intersectObjects(this.planes);
+    
+      // 全てのplaneを元の色に戻す
+      for (let i = 0; i < this.planes.length; i++){
+        this.planes[i].material.color.set(0xffffff);
+      }
+    
+      // マウスオーバーしたplaneを赤くする
+      if (intersects.length > 0) {
+        intersects[0].object.material.color.set(0xff0000);
+      }
+    }, false);
+
+    let currentGeometryIndex = 0;
+    
+    // クリックイベント
+    window.addEventListener('click', (mouseEvent) => {
+      const x = mouseEvent.clientX / window.innerWidth * 2.0 - 1.0;
+      const y = mouseEvent.clientY / window.innerHeight * 2.0 - 1.0;
+      const v = new THREE.Vector2(x, -y);
+      this.raycaster.setFromCamera(v, this.camera);
+      const intersects = this.raycaster.intersectObjects(this.planes);
+    
+      // クリックしたplaneを黄色くする
+      if (intersects.length > 0 && intersects[0].object.material.color.getHex() === 0xff0000) {
+        intersects[0].object.material.color.set(0xffff00);
+        // パーティクルのジオメトリを更新
+        currentGeometryIndex = (currentGeometryIndex + 1) % this.geometries.length;
+        this.points.geometry = this.geometries[currentGeometryIndex];
+      }  else {
+        // plane以外の場所がクリックされた場合、パーティクルを初期状態に戻す
+        this.points.geometry = this.geometries[0];
+      }
+    }, false);
 
     // ウィンドウのリサイズを検出できるようにする
     window.addEventListener('resize', () => {
@@ -134,35 +204,79 @@ class ThreeApp {
     );
     this.scene.add(this.ambientLight);
 
-    // パーティクル用のマテリアル @@@
-    this.material = new THREE.PointsMaterial(ThreeApp.MATERIAL_PARAM);
+    // 交差時に表示するためのマテリアルを定義 @@@
+    this.hitMaterial = new THREE.MeshPhongMaterial(ThreeApp.INTERSECTION_MATERIAL_PARAM);
+    this.hitMaterial.map = this.texture;
 
-    // パーティクルの定義 @@@
-    this.geometry = new THREE.BufferGeometry(); // 特定の形状を持たないジオメトリ
-    const COUNT = 10;    // パーティクルの行と列のカウント数
-    const WIDTH = 10.0;  // どの程度の範囲に配置するかの幅
-    const vertices = []; // まず頂点情報を格納する単なる配列（Array）
-    for (let i = 0; i <= COUNT; ++i) {
-      // カウンタ変数 i から X 座標を算出
-      const x = (i / COUNT - 0.5) * WIDTH;
-      for(let j = 0; j <= COUNT; ++j){
-        // カウンタ変数 j から Y 座標を算出
-        const y = (j / COUNT - 0.5) * WIDTH;
-        // 配列に頂点を加える
-        vertices.push(x, y, 0.0);
-      }
+    //this.planeGroup = new THREE.Group();
+    this.planes = [];
+    this.planeMaretials = [];
+    this.planeGeometry = new THREE.PlaneGeometry(1, 1);
+
+    for (let i = 0; i < 3; i++){
+      this.planeMaretial = new THREE.MeshBasicMaterial(ThreeApp.MATERIAL_PARAM2);
+      this.plane = new THREE.Mesh(this.planeGeometry, this.planeMaretial);
+      this.plane.position.x = i * 2 - 2;
+      this.plane.position.y = -5;
+      this.plane.position.z = 10;
+      this.planes.push(this.plane);
+      this.planeMaretials.push(this.planeMaretial);
+      this.scene.add(this.plane);
+      if (i === 0) this.moonplane = this.plane;
+      else if (i === 1) this.starplne = this.plane;
+      else if (i === 2) this.diamondplane = this.plane;
     }
 
-    // この頂点情報がいくつの要素からなるか（XYZ なので、３を指定）
-    const stride = 3;
+    this.imageLoader = new THREE.TextureLoader();
+    this.images = ['./moon.png', './star.png', './diamond.png'];
 
-    const attribute = new THREE.BufferAttribute(new Float32Array(vertices), stride);
-    this.geometry.setAttribute('position', attribute);
-    this.points = new THREE.Points(this.geometry, this.material);
-   
+    for (let i = 0; i < 3; i++) {
+      this.imageLoader.load(this.images[i], function(texture){
+        this.planeMaretials[i].map = texture;
+        this.planeMaretials[i].needsUpdate = true;
+       }.bind(this));
+    }
+    
+
+    // パーティクル用のマテリアル
+    this.material = new THREE.PointsMaterial(ThreeApp.MATERIAL_PARAM);
+
+    // パーティクルの定義
+    this.geometries = []; // 複数のジオメトリを格納する配列
+    const COUNT = 10;    // パーティクルの行と列のカウント数
+    const WIDTH = 10.0;  // どの程度の範囲に配置するかの幅
+
+    // 3つの異なる形状のジオメトリを作成
+    for (let g = 0; g < 3; ++g) {
+      const vertices = []; // 頂点情報を格納する配列
+      for (let i = 0; i <= COUNT; ++i) {
+        const x = (i / COUNT - 0.5) * WIDTH;
+        for(let j = 0; j <= COUNT; ++j){
+          const y = (j / COUNT - 0.5) * WIDTH;
+          let z;
+          if (g === 0) {
+            // 形状1
+            z = 0.0;
+          } else if (g === 1) {
+            // 形状2
+            z = (j / COUNT - 0.5) * WIDTH;
+          } else {
+            // 形状3
+            z = Math.sin(j / COUNT * Math.PI) * WIDTH;
+          }
+          vertices.push(x, y, z);
+        }
+      }
+      const stride = 3;
+      const geometry = new THREE.BufferGeometry();
+      const attribute = new THREE.BufferAttribute(new Float32Array(vertices), stride);
+      geometry.setAttribute('position', attribute);
+      this.geometries.push(geometry);
+    }
+
+    // 最初のジオメトリでパーティクルを作成
+    this.points = new THREE.Points(this.geometries[0], this.material); 
     this.scene.add(this.points);
-
-    this.scene.add(this.gltf.scene);
 
     // 軸ヘルパー
     const axesBarLength = 20.0;
@@ -173,7 +287,7 @@ class ThreeApp {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
   }
-
+  /*
   load() {
     const paths = ['./moon.glb', './star.glb', './diamond.glb'];
     return Promise.all(paths.map((path, index) => this.loadModel(path, index)));
@@ -181,8 +295,8 @@ class ThreeApp {
   
   loadModel(path, index) {
     return new Promise((resolve) => {
-      const loader = new GLTFLoader();
-      loader.load(path, (gltf) => {
+      const gltfLoader = new GLTFLoader();
+      gltfLoader.load(path, (gltf) => {
         // モデルの位置を設定
         gltf.scene.position.x = index * 2; // 2はモデル間の距離を表します。必要に応じて調整してください。
   
@@ -192,7 +306,7 @@ class ThreeApp {
       });
     });
   }
-
+  */
 
   /**
    * 描画処理
