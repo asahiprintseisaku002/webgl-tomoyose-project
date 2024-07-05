@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_レイヤー_1" data-name=" レイヤー 1" xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" version="1.1" viewBox="0 0 1024 1024">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #fff;
+        stroke-width: 0px;
+      }
+    </style>
+  </defs>
+  <polygon class="cls-1" points="512 104.4 613.2 415.8 940.5 415.8 675.7 608.2 776.9 919.6 512 727.1 247.1 919.6 348.3 608.2 83.5 415.8 410.8 415.8 512 104.4"/>
+</svg>
