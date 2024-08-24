@@ -247,6 +247,9 @@ class App {
     // シェーダーにprogressを送る
     this.gl.uniform1f(this.uniformLocation.progress, this.progress);
   }
+  
+
+
 
   /**
    * 頂点属性のロケーションに関するセットアップを行う
@@ -272,6 +275,7 @@ class App {
       texture3: gl.getUniformLocation(this.program, 'u_texture3'),
       progress: gl.getUniformLocation(this.program, 'progress'),
       u_time: gl.getUniformLocation(this.program, 'u_time'),
+      rippleCenter: gl.getUniformLocation(this.program, 'rippleCenter'),
       applyRipple: gl.getUniformLocation(this.program, 'applyRipple') 
     };
   }
@@ -412,7 +416,7 @@ class App {
       // 深度は普通に書き込む状態に戻す
       gl.depthMask(true);
       // 各種行列を作る
-      let m = Mat4.rotate(Mat4.identity(), nowTime, Vec3.create(-1.0, 1.0, 0.0));
+      let m = Mat4.rotate(Mat4.identity(), nowTime, Vec3.create(1.0, 1.0, 0.0));
       const scaleMatrix = Mat4.scale(Mat4.identity(), Vec3.create(1.0, -1.0, 1.0)); 
       m = Mat4.multiply(scaleMatrix, m);
       const mvp = Mat4.multiply(vp, m);

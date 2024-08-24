@@ -37,13 +37,11 @@ void main() {
     // 波の減衰と強さ
     float attenuation = exp(-dist * 2.0); // 距離による減衰
     float ripple = sin(phase) * attenuation;
-    
+
     // リップル効果を反映したベクトルでテクスチャをサンプリング
     rippleVector = reflectVector + ripple * normal * amplitude;
   }
   rippleVector.y = -rippleVector.y; // Y軸を反転
-
-  //gl_FragColor = vec4(progress, 0.0, 0.0, 1.0); //デバッグ用
 
   vec4 color1 = textureCube(u_texture1, rippleVector);
   vec4 color2 = textureCube(u_texture2, rippleVector);

@@ -20,7 +20,7 @@ void main() {
   if (reflection) {
     reflectVector = reflect(eyeDirection, normal);
   }
-
+  //reflectVector.y = -reflectVector.y;
   vec3 rippleVector = reflectVector;
 
   if (applyRipple) {
@@ -31,19 +31,17 @@ void main() {
     float speed = 20.0;    // リップルが広がる速度
     float frequency = 20.0; // 波の周波数
     float phase = dist * frequency - u_time * speed;
-    float rippleEffect = max(0.0, 3.0 - progress);
+    float rippleEffect = max(0.0, 1.0 - progress);
     float amplitude = rippleEffect * 0.5; // 振幅を減衰させる
     
     // 波の減衰と強さ
     float attenuation = exp(-dist * 2.0); // 距離による減衰
     float ripple = sin(phase) * attenuation;
-    
+
     // リップル効果を反映したベクトルでテクスチャをサンプリング
     rippleVector = reflectVector + ripple * normal * amplitude;
   }
   rippleVector.y = -rippleVector.y; // Y軸を反転
-
-  //gl_FragColor = vec4(progress, 0.0, 0.0, 1.0); //デバッグ用
 
   vec4 color1 = textureCube(u_texture1, rippleVector);
   vec4 color2 = textureCube(u_texture2, rippleVector);
@@ -57,4 +55,6 @@ void main() {
   }
 
   gl_FragColor = finalColor;
+  //gl_FragColor = vec4(progress, 0.0, 0.0, 1.0); //デバッグ用
+
 }

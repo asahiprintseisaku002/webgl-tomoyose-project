@@ -227,7 +227,7 @@ class App {
     setTimeout(() => {
       this.applyRipple = false;
       this.gl.uniform1i(this.uniformLocation.applyRipple, this.applyRipple);
-    }, 2000); 
+    }, 2000); // 1秒後にリセット
   }
   
   
@@ -247,6 +247,9 @@ class App {
     // シェーダーにprogressを送る
     this.gl.uniform1f(this.uniformLocation.progress, this.progress);
   }
+  
+
+
 
   /**
    * 頂点属性のロケーションに関するセットアップを行う
@@ -272,6 +275,7 @@ class App {
       texture3: gl.getUniformLocation(this.program, 'u_texture3'),
       progress: gl.getUniformLocation(this.program, 'progress'),
       u_time: gl.getUniformLocation(this.program, 'u_time'),
+      rippleCenter: gl.getUniformLocation(this.program, 'rippleCenter'),
       applyRipple: gl.getUniformLocation(this.program, 'applyRipple') 
     };
   }
@@ -408,18 +412,13 @@ class App {
       // VBO と IBO
       WebGLUtility.enableBuffer(gl, this.cube2VBO, this.attributeLocation, this.attributeStride, this.cube2IBO);
       // バックフェイスカリングは裏面をカリング
-      gl.cullFace(gl.FRONT);
+      gl.cullFace(gl.BACK);
       // 深度は普通に書き込む状態に戻す
       gl.depthMask(true);
       // 各種行列を作る
-      let m = Mat4.rotate(Mat4.identity(), nowTime, Vec3.create(-1.0, 1.0, 0.0));
-      const scaleMatrix = Mat4.scale(Mat4.identity(), Vec3.create(1.0, -1.0, 1.0)); 
-      m = Mat4.multiply(scaleMatrix, m);
+      const m = Mat4.rotate(Mat4.identity(), nowTime, Vec3.create(1.0, 1.0, 0.0));
       const mvp = Mat4.multiply(vp, m);
-      let normalMatrix = Mat4.transpose(Mat4.inverse(m));
-
-      const normalScaleMatrix = Mat4.scale(Mat4.identity(), Vec3.create(1.0, -1.0, 1.0));
-      normalMatrix = Mat4.multiply(normalScaleMatrix, normalMatrix);
+      const normalMatrix = Mat4.transpose(Mat4.inverse(m));
       // シェーダに各種パラメータを送る
       gl.uniformMatrix4fv(this.uniformLocation.mMatrix, false, m);
       gl.uniformMatrix4fv(this.uniformLocation.mvpMatrix, false, mvp);

@@ -49,6 +49,7 @@ class App {
   texture;           // テクスチャのインスタンス
   //isBackground;      // 背景の描画を行うかどうかのフラグ @@@
   progress;
+  startTime;
   
 
   constructor() {
@@ -215,26 +216,31 @@ class App {
   }
 
   onClick(event) {
-    this.applyRipple = true; // クリック時にリップルを適用
+    // リップルエフェクトを有効にする
+    this.applyRipple = true;
     this.gl.uniform1i(this.uniformLocation.applyRipple, this.applyRipple);
+  
+    // 現在の進行度を初期値として設定
     this.initialProgress = this.progress;
-    this.targetProgress = (this.progress + 1) % 3;
-
-    const startTime = Date.now();
-    this.animateProgress(startTime);
-
+  
+    // 強制的に少し進めてアニメーションをトリガー
+    this.targetProgress = this.progress + 1.0;
+  
+    // 新しいタイムスタンプでアニメーションをリセット
+    this.startTime = Date.now();
+    this.animateProgress(this.startTime);
+  
     // リップル効果を一定時間後にリセット
     setTimeout(() => {
       this.applyRipple = false;
       this.gl.uniform1i(this.uniformLocation.applyRipple, this.applyRipple);
-    }, 2000); 
+    }, 2000);  // 2秒後にリセット
   }
-  
   
   animateProgress(startTime) {
     const currentTime = Date.now();
-    const elapsedTime = (currentTime - startTime) / 2000; // 経過時間（秒）
-    const duration = 0.8; // イージングの持続時間（秒）
+    const elapsedTime = (currentTime - startTime) / 2000;  // 2000msに対する経過時間
+    const duration = 1.0;  // イージングの持続時間
   
     if (elapsedTime >= duration) {
       this.progress = this.targetProgress;
@@ -244,10 +250,15 @@ class App {
       requestAnimationFrame(() => this.animateProgress(startTime));
     }
   
-    // シェーダーにprogressを送る
+    // シェーダーに progress を送信
     this.gl.uniform1f(this.uniformLocation.progress, this.progress);
+  
+    // デバッグ用ログ
+    console.log(`Progress: ${this.progress}, Target: ${this.targetProgress}, Elapsed: ${elapsedTime}`);
   }
-
+  
+  
+  
   /**
    * 頂点属性のロケーションに関するセットアップを行う
    */
@@ -408,18 +419,13 @@ class App {
       // VBO と IBO
       WebGLUtility.enableBuffer(gl, this.cube2VBO, this.attributeLocation, this.attributeStride, this.cube2IBO);
       // バックフェイスカリングは裏面をカリング
-      gl.cullFace(gl.FRONT);
+      gl.cullFace(gl.BACK);
       // 深度は普通に書き込む状態に戻す
       gl.depthMask(true);
       // 各種行列を作る
-      let m = Mat4.rotate(Mat4.identity(), nowTime, Vec3.create(-1.0, 1.0, 0.0));
-      const scaleMatrix = Mat4.scale(Mat4.identity(), Vec3.create(1.0, -1.0, 1.0)); 
-      m = Mat4.multiply(scaleMatrix, m);
+      const m = Mat4.rotate(Mat4.identity(), nowTime, Vec3.create(1.0, 1.0, 0.0));
       const mvp = Mat4.multiply(vp, m);
-      let normalMatrix = Mat4.transpose(Mat4.inverse(m));
-
-      const normalScaleMatrix = Mat4.scale(Mat4.identity(), Vec3.create(1.0, -1.0, 1.0));
-      normalMatrix = Mat4.multiply(normalScaleMatrix, normalMatrix);
+      const normalMatrix = Mat4.transpose(Mat4.inverse(m));
       // シェーダに各種パラメータを送る
       gl.uniformMatrix4fv(this.uniformLocation.mMatrix, false, m);
       gl.uniformMatrix4fv(this.uniformLocation.mvpMatrix, false, mvp);
@@ -432,11 +438,15 @@ class App {
 }
 
 /**
- * イージング関数
+ * イージング
  * @param {number} t - 進行度
  * @return {number} イージング後の進行度
  */
+
 function easeOutQuad(t) {
-  return t * (2- t);
+  return t * (2 - t);
+}
+function easeInOutQuad(t) {
+  return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
 }
 
